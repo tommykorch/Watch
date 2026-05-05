@@ -1,5 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.Watch" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Watch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        <item name="colorPrimary">#6200ED</item>
+        <item name="colorPrimaryVariant">#37008f</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:statusBarColor">#6200ED</item>
+    </style>
 </resources>
