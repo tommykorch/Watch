@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/delete_movies"
+        android:layout_width="56dp"
+        android:layout_height="62dp"
+        android:layout_marginEnd="8dp"
+        android:backgroundTint="#006750A3"
+        android:title="@string/descriptionTrash"
+        android:scaleX="2"
+        android:scaleY="2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/toolbar"
+        android:icon="@drawable/baseline_restore_from_trash_24"
+        app:showAsAction="ifRoom|withText"/>
+</menu>
