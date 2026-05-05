@@ -1,47 +1,48 @@
 package com.example.watch
 
+import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.watch.ui.theme.WatchTheme
+import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.watch.data.*
+import com.example.watch.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var db: MovieDatabase
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            WatchTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        db = MovieDatabase.getDatabase(this)
+        binding.recView.layoutManager = LinearLayoutManager(this)
+
+        db.movieDao().getAllMovies().observe(this) { movies ->
+            if (movies.isEmpty()) {
+                binding.imageWithoutMovies.visibility = View.VISIBLE
+                binding.textWithoutMovies.visibility = View.VISIBLE
+                binding.recView.visibility = View.GONE
+            } else {
+                binding.imageWithoutMovies.visibility = View.GONE
+                binding.textWithoutMovies.visibility = View.GONE
+                binding.recView.visibility = View.VISIBLE
+                binding.recView.adapter = MovieAdapter(movies, db)
             }
         }
-    }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+        binding.buttonAdd.setOnClickListener {
+            startActivity(Intent(this, AddActivity::class.java))
+        }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    WatchTheme {
-        Greeting("Android")
+        binding.buttonDelete.setOnClickListener {
+            lifecycleScope.launch {
+                db.movieDao().deleteSelected()
+            }
+        }
     }
 }
