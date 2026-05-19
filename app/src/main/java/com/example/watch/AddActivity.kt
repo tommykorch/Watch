@@ -21,15 +21,20 @@ import coil.compose.AsyncImage
 import com.example.watch.data.*
 import com.example.watch.ui.theme.WatchAppTheme
 import kotlinx.coroutines.launch
+import com.example.watch.AddViewModel
+import com.example.watch.MovieRepository
 
 class AddActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val db = MovieDatabase.getDatabase(this)
+        val repository = MovieRepository(db.movieDao(), RetrofitClient.api)
+        val viewModel = AddViewModel(repository)
 
         setContent {
             WatchAppTheme {
-                AddScreen(db) {
+                AddScreen(viewModel) {
                     finish()
                 }
             }
@@ -39,7 +44,7 @@ class AddActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddScreen(db: MovieDatabase, onSaveSuccess: () -> Unit) {
+fun AddScreen(viewModel: AddViewModel, onSaveSuccess: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -123,8 +128,9 @@ fun AddScreen(db: MovieDatabase, onSaveSuccess: () -> Unit) {
                                 year = year,
                                 poster = posterUrl
                             )
-                            db.movieDao().insert(movie)
-                            onSaveSuccess()
+                            viewModel.saveMovie(title, year, posterUrl, imdbId) {
+                                onSaveSuccess()
+                            }
                         }
                     }
                 },
