@@ -9,5 +9,7 @@ class MovieRepository(private val movieDao: MovieDao, private val api: OmdbRespo
 
     suspend fun deleteMovie(movie: Movie) = movieDao.delete(movie)
 
-    suspend fun searchMovies(query: String) = api.searchMovies(query)
+    suspend fun searchMovies(query: String): MovieSearchResponse {
+        return api.searchMovies(query)
+    }
 }

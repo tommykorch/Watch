@@ -24,11 +24,17 @@ class SearchActivity : ComponentActivity() {
 
         val query = intent.getStringExtra("QUERY") ?: ""
 
-        val api = RetrofitClient.api
+        val db = MovieDatabase.getDatabase(this)
+        val repository = MovieRepository(db.movieDao(), RetrofitClient.api)
+        val viewModel = SearchViewModel(repository)
 
         setContent {
             WatchAppTheme {
-                SearchScreen(query, api) { selectedMovie ->
+                LaunchedEffect(query) {
+                    viewModel.search(query)
+                }
+
+                SearchScreen(query, viewModel) { selectedMovie ->
                     val resultIntent = Intent().apply {
                         putExtra("title", selectedMovie.Title)
                         putExtra("year", selectedMovie.Year)
@@ -45,26 +51,11 @@ class SearchActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(query: String, api: OmdbResponse, onMovieSelected: (MovieApiItem) -> Unit) {
+fun SearchScreen(query: String, viewModel: SearchViewModel, onMovieSelected: (MovieApiItem) -> Unit) {
 
-    var movies by remember { mutableStateOf<List<MovieApiItem>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(query) {
-        try {
-            val response = api.searchMovies(query)
-            if (response.Response == "True") {
-                movies = response.Search ?: emptyList()
-            } else {
-                errorMessage = "Фильмы не найдены"
-            }
-        } catch (e: Exception) {
-            errorMessage = "Ошибка сети: ${e.localizedMessage}"
-        } finally {
-            isLoading = false
-        }
-    }
+    val movies = viewModel.movies
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
 
     Scaffold(
         topBar = {
@@ -83,7 +74,7 @@ fun SearchScreen(query: String, api: OmdbResponse, onMovieSelected: (MovieApiIte
             if (isLoading) {
                 CircularProgressIndicator()
             } else if (errorMessage != null) {
-                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
+                Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
             } else if (movies.isEmpty()) {
                 Text("No results found")
             } else {
