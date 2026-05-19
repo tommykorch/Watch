@@ -1,61 +1,140 @@
 package com.example.watch
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
+import coil.compose.AsyncImage
 import com.example.watch.data.*
-import com.example.watch.databinding.ActivityAddBinding
+import com.example.watch.ui.theme.WatchAppTheme
 import kotlinx.coroutines.launch
 
-class AddActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityAddBinding
-    private lateinit var db: MovieDatabase
-    private var selectedImdbId: String = ""
-    private var selectedPosterUrl: String = ""
-
+class AddActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityAddBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        db = MovieDatabase.getDatabase(this)
+        val db = MovieDatabase.getDatabase(this)
 
-        binding.imageButtonSearch.setOnClickListener {
-            val query = binding.editTextTitle.text.toString()
-            if (query.isNotEmpty()) {
-                val intent = Intent(this, SearchActivity::class.java).apply {
-                    putExtra("QUERY", query)
+        setContent {
+            WatchAppTheme {
+                AddScreen(db) {
+                    finish()
                 }
-                startActivityForResult(intent, 100)
-            }
-        }
-
-        binding.buttonAddMovie.setOnClickListener {
-            val movie = Movie(
-                imdbID = selectedImdbId,
-                title = binding.editTextTitle.text.toString(),
-                year = binding.editTextYear.text.toString(),
-                poster = selectedPosterUrl
-            )
-            lifecycleScope.launch {
-                db.movieDao().insert(movie)
-                finish()
             }
         }
     }
+}
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 100 && resultCode == RESULT_OK) {
-            binding.editTextTitle.setText(data?.getStringExtra("title"))
-            binding.editTextYear.setText(data?.getStringExtra("year"))
-            selectedImdbId = data?.getStringExtra("imdb") ?: ""
-            selectedPosterUrl = data?.getStringExtra("poster") ?: ""
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddScreen(db: MovieDatabase, onSaveSuccess: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-            binding.imageViewPoster.visibility = View.VISIBLE
-            Glide.with(this).load(selectedPosterUrl).into(binding.imageViewPoster)
+    var title by remember { mutableStateOf("") }
+    var year by remember { mutableStateOf("") }
+    var posterUrl by remember { mutableStateOf("") }
+    var imdbId by remember { mutableStateOf("") }
+
+    val searchLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            title = data?.getStringExtra("title") ?: ""
+            year = data?.getStringExtra("year") ?: ""
+            posterUrl = data?.getStringExtra("poster") ?: ""
+            imdbId = data?.getStringExtra("imdb") ?: ""
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Add New Movie") })
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Movie Title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = year,
+                onValueChange = { year = it },
+                label = { Text("Release Year") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Button(
+                onClick = {
+                    val intent = Intent(context, SearchActivity::class.java).apply {
+                        putExtra("QUERY", title)
+                    }
+                    searchLauncher.launch(intent)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Search")
+            }
+
+            if (posterUrl.isNotEmpty()) {
+                Text("Selected Poster:", style = MaterialTheme.typography.labelLarge)
+                AsyncImage(
+                    model = posterUrl,
+                    contentDescription = "Selected Poster",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Button(
+                onClick = {
+                    if (title.isNotBlank() && imdbId.isNotBlank()) {
+                        scope.launch {
+                            val movie = Movie(
+                                imdbID = imdbId,
+                                title = title,
+                                year = year,
+                                poster = posterUrl
+                            )
+                            db.movieDao().insert(movie)
+                            onSaveSuccess()
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                enabled = title.isNotBlank() && imdbId.isNotBlank()
+            ) {
+                Text("Save to Favorites")
+            }
         }
     }
 }
