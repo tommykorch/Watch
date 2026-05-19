@@ -24,11 +24,14 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val db = MovieDatabase.getDatabase(this)
+        val repository = MovieRepository(db.movieDao(), RetrofitClient.api)
+        val viewModel = MainViewModel(repository)
 
         setContent {
             WatchAppTheme {
-                MainScreen(db) {
+                MainScreen(viewModel) {
                     startActivity(Intent(this, AddActivity::class.java))
                 }
             }
@@ -38,8 +41,8 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(db: MovieDatabase, onAddClick: () -> Unit) {
-    val movies by db.movieDao().getAllMovies().collectAsStateWithLifecycle(initialValue = emptyList())
+fun MainScreen(viewModel: MainViewModel, onAddClick: () -> Unit) {
+    val movies by viewModel.movies.collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -79,7 +82,7 @@ fun MainScreen(db: MovieDatabase, onAddClick: () -> Unit) {
                         movie = movie,
                         onDelete = {
                             scope.launch {
-                                db.movieDao().delete(movie)
+                                viewModel.deleteMovie(movie)
                             }
                         }
                     )
